@@ -19,7 +19,7 @@ def populate():
         {"title": "How to Think like a Computer Scientist",
          "url": "http://www.greenteapress.com/thinkpython/", "views": 69},
         {"title": "Learn Python in 10 Minutes",
-         "url": "http://www.korokithatkis.net/tutorials/python/", "views": 420} ]
+         "url": "http://www.korokithakis.net/tutorials/python/", "views": 420} ]
 
     django_pages = [
         {"title": "Official Django Tutorial",
