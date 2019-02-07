@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-
+{% load staticfiles %}
 <html>
 
 	<head>
@@ -13,7 +13,8 @@
 		</div>
 		<div>
 			<a href="/rango/">Back to main page</a><br/>
-			<img src="{{ MEDIA_URL}}cat.jpg" alt="Picture of a cat" />
+			<img src="{{ MEDIA_URL }}cat.jpg" alt="Picture of a cat" />
+			<img src="{% static 'images/rango.jpg' %}" alt="Picture of Rango" />
 		</div>
 	</body>
 </html>
