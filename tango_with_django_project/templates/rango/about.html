@@ -1,20 +1,16 @@
-<!DOCTYPE html>
+{% extends 'rango/base.html' %}
 {% load staticfiles %}
-<html>
-
-	<head>
-		<title>About</title>
-	</head>
-	<body>
-		<h1>Rango says...</h1>
+	{% block title_block %}
+		About
+	{% endblock %}
+	{% block body_block %}
+		<h1>About Page</h1>
+			This tutorial was put together by Nawaf Al Lawati
 		<div>
-			This is the about page! <br/>
-			<strong>{{ coolmessage }}</strong><br/>
+			Rango says the about page is here.<br />
+			<strong>{{ boldmessage }}</strong><br />
 		</div>
 		<div>
-			<a href="/rango/">Back to main page</a><br/>
-			<img src="{{ MEDIA_URL }}cat.jpg" alt="Picture of a cat" />
-			<img src="{% static 'images/rango.jpg' %}" alt="Picture of Rango" />
-		</div>
-	</body>
-</html>
+			<img src="{{ MEDIA_URL }}cat.jpg" alt="Picture of a cat" /><br />
+			<img src="{% static "images/rango.jpg" %}" alt="Picture of Rango" />
+{% endblock %}
