@@ -4,7 +4,13 @@
   Index
 {% endblock %}
 {% block body_block %}
-  <h1>Rango says...</h1><br />hey there partner!
+  <h1>Rango says...</h1>
+  <br />
+  {% if user.is_authenticated %}
+	howdy {{ user.username }}!
+  {% else %}
+	hey there partner!
+  {% endif %}
   <div>
     <h3>Most Liked Categories</h3>
     {% if categories %}
