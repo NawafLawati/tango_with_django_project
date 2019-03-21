@@ -5,6 +5,10 @@ from django.template.defaultfilters import slugify
 from django.contrib.auth.models import User
 
 from django.core.validators import MaxValueValidator, MinValueValidator
+
+from datetime import datetime
+
+from django.db.models import Avg
 	
 class Category(models.Model):
         name = models.CharField(max_length=128, unique=True)
@@ -30,20 +34,39 @@ class Page(models.Model):
         return self.title
 
 class Piece(models.Model):
-	title = models.CharField(max_length=128)
+	
+	title = models.CharField(max_length=128, primary_key=True)
 	artist = models.CharField(max_length=50)
 	uploader = models.ForeignKey(User)
 	category = models.ForeignKey(Category)
-	rating = models.IntegerField(default=5)
+	#rating = models.FloatField(default=5)
+	
+	def rate(self):
+		rec = Comment.objects.values('song').annotate(Avg('score'))
+		
+		for song in rec:
+			if song['song'] == self.title:
+				return song['score__avg']
+			
+		return 5.0
+		
+	rating = property(rate)
+	
 	description = models.CharField(max_length=300)
-	imgfile = models.ImageField
+	imgfile = models.ImageField(default='',upload_to='sheets')
+	date = models.DateTimeField(default=datetime.now())
+	def __str__(self):
+		return self.title
+
 	
 class Comment(models.Model):
-        song = models.ForeignKey(Piece)
-        name = models.CharField(max_length=50)
-        image = models.ImageField
-        comment = models.CharField(max_length=300)
-        score = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
+	song = models.ForeignKey(Piece)
+	name = models.ForeignKey(User)
+	image = models.ImageField(default='',upload_to='profile_images')
+	comment = models.CharField(max_length=300)
+	score = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
+	def __str__(self):
+		return str(self.song) + " - " + str(self.name)
 
 class UserProfile(models.Model):
     # This line is required. Links UserProfile to a User model instance.
