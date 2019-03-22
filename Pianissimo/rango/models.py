@@ -39,18 +39,31 @@ class Piece(models.Model):
 	artist = models.CharField(max_length=50)
 	uploader = models.ForeignKey(User)
 	category = models.ForeignKey(Category)
-	#rating = models.FloatField(default=5)
+	score = models.FloatField(default=5)
+
+	slug = models.SlugField(unique=True, null = False)
+
+	def save(self, *args, **kwargs):
+                self.slug = slugify(self.title)
+                super(Piece, self).save(*args, **kwargs)
 	
 	def rate(self):
 		rec = Comment.objects.values('song').annotate(Avg('score'))
 		
 		for song in rec:
 			if song['song'] == self.title:
+				mod = Piece.objects.get(title = song['song'])
+				mod.score = song['score__avg']
+				mod.save()
 				return song['score__avg']
 			
 		return 5.0
 		
-	rating = property(rate)
+			
+	rating = property(rate)	
+	
+	
+	
 	
 	description = models.CharField(max_length=300)
 	imgfile = models.ImageField(default='',upload_to='sheets')
@@ -62,7 +75,7 @@ class Piece(models.Model):
 class Comment(models.Model):
 	song = models.ForeignKey(Piece)
 	name = models.ForeignKey(User)
-	image = models.ImageField(default='',upload_to='profile_images')
+	#image = models.ImageField(default='',upload_to='profile_images')
 	comment = models.CharField(max_length=300)
 	score = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
 	def __str__(self):

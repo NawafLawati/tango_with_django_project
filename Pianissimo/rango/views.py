@@ -14,34 +14,76 @@ from datetime import datetime
 
 from rango.webhose_search import run_query
 
+from django.shortcuts import redirect
+from django.contrib.auth.models import User
+from rango.models import UserProfile
 
+def piece(request, piece_title_slug):
+    # Create a context dictionary which we can pass
+    # to the template rendering engine.
+    context_dict = {}
+    try:
+        # Can we find a piece title slug with the given name?
+        # If we can't, the .get() method raises a DoesNotExist exception.
+        # So the .get() method returns one model instance or raises an exception.
+        piece = Piece.objects.get(slug=piece_title_slug)
+        
+
+        # Retrieve all of the associated pages.
+        # Note that filter() will return a list of page objects or an empty list
+        #pages = Page.objects.filter(category=category)
+
+        # Adds our results list to the template context under name pages.
+        #context_dict['pages'] = pages
+        # We also add the category object from
+        # the database to the context dictionary.
+        # We'll use this in the template to verify that the category exists.
+        #context_dict['category'] = category
+        context_dict['piece'] = piece
+
+    except Piece.DoesNotExist:
+        # We get here if we didn't find the specified category.
+        # Don't do anything -
+        # the template will display the "no category" message for us.
+        #context_dict['category'] = None
+        context_dict['piece'] = None
+        
+
+    # Go render the response and return it to the client.
+    return render(request, 'rango/piece.html', context_dict)
+
+    
 def music(request):
     piece_list_date = Piece.objects.order_by('-title')[:5]
     piece_list_rating = Piece.objects.order_by('artist')[:5]
     context_dict = {'piece_dates': piece_list_date,'piece_rates':piece_list_rating}
-    response = render(request, 'rango/music.html', context_dict)
-    return response
-def index(request):
+    result_list = []
+    if request.method == "POST":
+        query = request.POST['query'].strip()
 
-    request.session.set_test_cookie()
+        if query:
+            result_list = run_query(query)
+            context_dict['query'] = query
+            context_dict['result_list'] = result_list
+    return render(request, 'rango/music.html', context_dict)
+
+def index(request):
+	request.session.set_test_cookie()
 
     # Query the database for a list of ALL categories currently stored.
     # Order the categories by no. likes in descending order.
     # Retrieve the top 5 only - or all if less than 5.
     # Place the list in our context_dict dictionary
     # that will be passed to the template engine.
-
-    category_list_views = Category.objects.order_by('-id')[:5]
-    piece_list_rating = Piece.objects.order_by('artist')[:5]
-    context_dict = {'cat_likes': category_list_views,'page_views':piece_list_rating}
-
-    visitor_cookie_handler(request)
-    context_dict['visits'] = request.session['visits']
-    
-    response = render(request, 'rango/index.html', context_dict)
-
-    # Return response back to the user, updating any cookies that need changed.
-    return response
+	category_list_views = Category.objects.order_by('-id')[:5]
+	piece_list_rating = Piece.objects.order_by('-score')[:5]
+	context_dict = {'cat_likes': category_list_views,'page_views':piece_list_rating}
+	
+	visitor_cookie_handler(request)
+	context_dict['visits'] = request.session['visits']
+	response = render(request, 'rango/index.html', context_dict)
+	# Return response back to the user, updating any cookies that need changed.
+	return response
 
 def about(request):
     if request.session.test_cookie_worked():
@@ -63,24 +105,27 @@ def show_category(request, category_name_slug):
         # If we can't, the .get() method raises a DoesNotExist exception.
         # So the .get() method returns one model instance or raises an exception.
         category = Category.objects.get(slug=category_name_slug)
+        piece_list = Piece.objects.filter(category = category).order_by('-title')
 
         # Retrieve all of the associated pages.
         # Note that filter() will return a list of page objects or an empty list
-        pages = Page.objects.filter(category=category)
+        #pages = Page.objects.filter(category=category)
 
         # Adds our results list to the template context under name pages.
-        context_dict['pages'] = pages
+        #context_dict['pages'] = pages
         # We also add the category object from
         # the database to the context dictionary.
         # We'll use this in the template to verify that the category exists.
         context_dict['category'] = category
+        context_dict['piece_list'] = piece_list
 
     except Category.DoesNotExist:
         # We get here if we didn't find the specified category.
         # Don't do anything -
         # the template will display the "no category" message for us.
         context_dict['category'] = None
-        context_dict['pages'] = None
+        context_dict['piece_list'] = None
+        
 
     # Go render the response and return it to the client.
     return render(request, 'rango/category.html', context_dict)
@@ -161,20 +206,47 @@ def visitor_cookie_handler(request):
         request.session['last_visit'] = last_visit_cookie
 
     # Update/set the visits cookie
-    request.session['visits'] = visits
+    request.session['visits'] = visits   
 
 @login_required
-def restricted(request):
-    return render(request, 'rango/restricted.html')
-    
-def search(request):
-    result_list = []
-    query = ""
+def register_profile(request):
+    form = UserProfileForm()
 
     if request.method == 'POST':
-        query = request.POST['query'].strip()
-        if query:
-            # Run our Webhose search function to get the results list!
-            result_list = run_query(query)
+        form = UserProfileForm(request.POST, request.FILES)
+        if form.is_valid():
+            user_profile = form.save(commit=False)
+            user_profile.user = request.user
+            user_profile.save()
 
-    return render(request, 'rango/search.html', {'result_list': result_list, 'query': query})
+            return redirect('index')
+        else:
+            print(form.errors)
+
+    context_dict = {'form':form}
+
+    return render(request, 'rango/profile_registration.html', context_dict)
+
+
+@login_required
+def profile(request, username):
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return redirect('index')
+
+    userprofile = UserProfile.objects.get_or_create(user=user)[0]
+    form = UserProfileForm(
+        {'website': userprofile.website,'bio': userprofile.bio,
+        'picture': userprofile.picture})
+    
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, request.FILES, instance=userprofile)
+        if form.is_valid():
+            form.save(commit=True)
+            return redirect('profile', user.username)
+        else:
+            print(form.errors)
+
+    return render(request, 'rango/profile.html',
+        {'userprofile': userprofile, 'selecteduser': user, 'form': form})
